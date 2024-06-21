@@ -1,12 +1,17 @@
 # ChatApp Setup and Run Instructions
 
 ## Prerequisites
+
 ### node_module installation
+
   >npm i
+
   >whatsappClone>npm i
 
 ### Run app
+
   >node app.js
+
   >whatsappClone>npm run dev
 
 ## Environment Variables
