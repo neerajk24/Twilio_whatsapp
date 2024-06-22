@@ -1,4 +1,5 @@
-// controllers.js
+// user.controllers.js
+
 import Conversation from '../../Models/chat.model.js';
 import axios from 'axios';
 import { parseString } from 'xml2js';
@@ -93,9 +94,29 @@ export const getChatbyNumber = async (req, res) => {
         if (data) {
             response = data.messages;
         }
-        res.status(200).json(response);
+        res.status(200).json(response); 
     } catch (error) {
         res.status(500).json({ message: 'Internal server error', error: error.message });
 
     }
 } 
+
+// export const getChatbyNumber = async (req, res) => {
+//     try {
+//         const { number, page = 1, limit = 20 } = req.body; // page and limit for pagination
+//         const skip = (page - 1) * limit; // calculate the number of documents to skip
+
+//         const data = await Conversation.findOne({ participant: number });
+//         let response = { messages: [], hasMore: false };
+
+//         if (data) {
+//             const totalMessages = data.messages.length;
+//             response.messages = data.messages.slice().reverse().slice(skip, skip + limit); // reverse and paginate
+//             response.hasMore = skip + limit < totalMessages; // check if there are more messages to load
+//         }
+
+//         res.status(200).json(response);
+//     } catch (error) {
+//         res.status(500).json({ message: 'Internal server error', error: error.message });
+//     }
+// }
