@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback , useMemo} from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { styled } from "@mui/material/styles";
 import axios from "axios";
 import io from "socket.io-client";
@@ -516,8 +516,11 @@ const ChatListComponent = React.memo(
                       color: 'white',
                       fontWeight: 'bold',
                       borderRadius: '50%',
-                      minWidth: '20px',
-                      height: '20px',
+                      minWidth: '24px',
+                      height: '24px',
+                      fontSize: '0.9rem',
+                      padding: '0 6px',
+                      marginRight: '10px'
                     },
                   }}
                 />
@@ -578,6 +581,18 @@ function WhatsAppClone() {
   const [hasMore, setHasMore] = useState(true);
   const [progress, setProgress] = useState(0);
   const [unreadCount, setUnreadcount] = useState([]);
+  const scrollToNewMessage = () => {
+    const scrollableDiv = document.getElementById('scrollableDiv');
+    if (scrollableDiv && scrollableDiv.scrollTop === 0) {
+      scrollableDiv.scrollTop = 0;
+    }
+  };
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToNewMessage();
+    }
+  }, [messages]);
 
   useEffect(() => {
     setProgress(25);
@@ -599,7 +614,7 @@ function WhatsAppClone() {
     socket.on("receiveMessage", (newMessage) => {
       console.log("message received");
       setMessages((prevMessages) => [newMessage, ...prevMessages]);
-
+      scrollToNewMessage();
     });
     socket.on("unreadMessages", ({ newMessage, unreadmsg }) => {
       console.log('unreadMessage came!!', unreadmsg);
@@ -676,7 +691,6 @@ function WhatsAppClone() {
   }, []);
 
   const loadMoreMessages = async () => {
-    console.log(page);
     if (!hasMore) return;
     const nextPage = page + 1;
     setProgress(30);
@@ -686,6 +700,10 @@ function WhatsAppClone() {
         page: nextPage,
         limit: 20,
       });
+
+      const scrollableDiv = document.getElementById('scrollableDiv');
+      const scrollHeightBefore = scrollableDiv.scrollHeight;
+
       setMessages((prevMessages) => [
         ...prevMessages,
         ...response.data.messages,
@@ -693,7 +711,13 @@ function WhatsAppClone() {
       setHasMore(response.data.hasMore);
       setPage(nextPage);
       setProgress(100);
-      console.log(messages);
+
+      // Maintain scroll position after loading more messages
+      requestAnimationFrame(() => {
+        const scrollHeightAfter = scrollableDiv.scrollHeight;
+        scrollableDiv.scrollTop += scrollHeightAfter - scrollHeightBefore;
+      });
+
     } catch (error) {
       console.error("Error loading more messages:", error);
       setProgress(100);
@@ -717,12 +741,12 @@ function WhatsAppClone() {
         await axios.post(`${URL}/api/user/sendMessage`, {
           message: newMessage,
         });
+        scrollToNewMessage();
       } catch (error) {
         console.log("Error in sending message", error.message);
       }
     }
   }, [content, currentUser]);
-
   return (
     <Root>
       <LoadingBar color="#f11946" progress={progress} height={4} />
@@ -767,6 +791,7 @@ function WhatsAppClone() {
                   </p>
                 }
                 scrollThreshold="200px"
+                isReverse={true}
               >
                 <MessageList
                   messages={messages}
