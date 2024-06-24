@@ -29,7 +29,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import SendIcon from "@mui/icons-material/Send";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 
-const URL = "http://localhost:5000";
+const URL = process.env.BASE_URL || "http://localhost:5000";
 
 const Root = styled("div")({
   display: "flex",
