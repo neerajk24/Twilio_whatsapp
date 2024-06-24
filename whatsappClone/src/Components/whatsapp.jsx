@@ -490,7 +490,7 @@ function WhatsAppClone() {
     socketRef.current = socket;
     socket.on("receiveMessage", (msg) => {
       console.log("message received");
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prevMessages) => [msg, ...prevMessages]);
     });
 
     return () => {
@@ -553,6 +553,7 @@ function WhatsAppClone() {
       setHasMore(response.data.hasMore);
       setPage(nextPage);
       setProgress(100);
+      console.log(messages);
     } catch (error) {
       console.error("Error loading more messages:", error);
       setProgress(100);
@@ -570,7 +571,7 @@ function WhatsAppClone() {
         timestamp: new Date(),
         is_read: false,
       };
-      setMessages((messages) => [...messages, newMessage]);
+      setMessages((prevMessages) => [newMessage, ...prevMessages]);
       setContent("");
       try {
         await axios.post(`${URL}/api/user/sendMessage`, {
