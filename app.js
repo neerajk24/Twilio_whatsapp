@@ -32,6 +32,7 @@ const io = new Server(server, {
 });
 
 let connectedSockets = [];
+let currentUser = null;
 
 io.on("connection", (socket) => {
   const Userid = socket.handshake.auth.userid;
@@ -40,7 +41,19 @@ io.on("connection", (socket) => {
     socketId: socket.id,
     Userid,
   });
+
   // Handle socket events here
+  socket.on('updateReadcount', async (count) => {
+    const data = await Conversation.findOne({ participant: count });
+    if (data) {
+      data.unreadCount = 0;
+      await data.save();
+    }
+
+  })
+  socket.on('changeUser', (user) => {
+    currentUser = user;
+  })
   socket.on("disconnect", () => {
     connectedSockets = connectedSockets.filter(
       (soc) => soc.socketId !== socket.id
@@ -56,6 +69,7 @@ queueService.addMessageHandler(async (messageData) => {
   console.log("Processing message:", messageData);
   const from = messageData.from.slice(10);
   const to = messageData.to.slice(10);
+  let unreadmsg = null;
   console.log(from);
   try {
     let data = await Conversation.findOne({ participant: from });
@@ -63,6 +77,7 @@ queueService.addMessageHandler(async (messageData) => {
       data = new Conversation({
         participant: from,
         messages: [],
+        unreadCount: 0,
       });
       console.log("new Convo created Reciever side...");
     }
@@ -89,6 +104,15 @@ queueService.addMessageHandler(async (messageData) => {
       timestamp: mongodbTimestamp,
       is_read: false,
     };
+    if (currentUser !== null && currentUser.phoneNumber !== from) {
+      data.unreadCount += 1;
+    }
+    if (currentUser === null) {
+      data.unreadCount += 1;
+
+    }
+    console.log(data.unreadCount);
+    unreadmsg = data.unreadCount;
     data.messages.push(newMessage);
     await data.save();
     console.log("successfully saved message on reciever side..");
@@ -98,7 +122,10 @@ queueService.addMessageHandler(async (messageData) => {
     );
 
     const SOCKET = connectedSockets.find((soc) => soc.Userid === to);
-    io.to(SOCKET.socketId).emit("receiveMessage", newMessage);
+    if (currentUser !== null && from === currentUser.phoneNumber) {
+      io.to(SOCKET.socketId).emit("receiveMessage", newMessage);
+    }
+    io.to(SOCKET.socketId).emit("unreadMessages", { newMessage, unreadmsg });
   } catch (error) {
     console.log("Error in storing message in reciever side", error.message);
   }

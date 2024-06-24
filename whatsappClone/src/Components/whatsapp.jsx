@@ -23,6 +23,7 @@ import {
   InputBase,
   IconButton,
   Divider,
+  Badge,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SendIcon from "@mui/icons-material/Send";
@@ -423,8 +424,37 @@ const ExpandedMediaView = ({ media, onClose }) => {
   );
 };
 
+// const ChatListComponent = React.memo(
+//   ({ listofUsers, loadChat, searchTerm }) => {
+//     const filteredUsers = listofUsers.filter(
+//       (user) =>
+//         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//         user.caseId.toLowerCase().includes(searchTerm.toLowerCase())
+//     );
+
+//     return (
+//       <ChatList>
+//         {filteredUsers.map((chat) => (
+//           <React.Fragment key={chat.id}>
+//             <ListItem button onClick={() => loadChat(chat)}>
+//               <ListItemAvatar>
+//                 <Avatar>{chat.name.charAt(0)}</Avatar>
+//               </ListItemAvatar>
+//               <ListItemText
+//                 primary={`${chat.name} (${chat.caseId})`}
+//                 secondary={chat.lastMessage}
+//               />
+//             </ListItem>
+//             <Divider />
+//           </React.Fragment>
+//         ))}
+//       </ChatList>
+//     );
+//   }
+// );
+
 const ChatListComponent = React.memo(
-  ({ listofUsers, loadChat, searchTerm }) => {
+  ({ listofUsers, loadChat, searchTerm, unreadCount }) => {
     const filteredUsers = listofUsers.filter(
       (user) =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -435,14 +465,61 @@ const ChatListComponent = React.memo(
       <ChatList>
         {filteredUsers.map((chat) => (
           <React.Fragment key={chat.id}>
-            <ListItem button onClick={() => loadChat(chat)}>
+            <ListItem
+              button
+              onClick={() => loadChat(chat)}
+              sx={{
+                '&:hover': {
+                  backgroundColor: '#F5F5F5',
+                },
+                padding: '10px 15px',
+              }}
+            >
               <ListItemAvatar>
-                <Avatar>{chat.name.charAt(0)}</Avatar>
+                <Avatar
+                  sx={{
+                    bgcolor: '#DFE5E7',
+                    color: '#4A4A4A',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {chat.name.charAt(0)}
+                </Avatar>
               </ListItemAvatar>
               <ListItemText
                 primary={`${chat.name} (${chat.caseId})`}
                 secondary={chat.lastMessage}
+                primaryTypographyProps={{
+                  sx: {
+                    fontWeight: 'bold',
+                    color: '#000000',
+                  }
+                }}
+                secondaryTypographyProps={{
+                  sx: {
+                    color: '#667781',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }
+                }}
               />
+              {unreadCount.find(item => item.phone === chat.phoneNumber)?.unreadCount > 0 && (
+                <Badge
+                  badgeContent={unreadCount.find(item => item.phone === chat.phoneNumber).unreadCount}
+                  color="primary"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      backgroundColor: '#25D366',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      borderRadius: '50%',
+                      minWidth: '20px',
+                      height: '20px',
+                    },
+                  }}
+                />
+              )}
             </ListItem>
             <Divider />
           </React.Fragment>
@@ -474,6 +551,7 @@ function WhatsAppClone() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [unreadCount, setUnreadcount] = useState([]);
 
   useEffect(() => {
     setProgress(25);
@@ -481,6 +559,10 @@ function WhatsAppClone() {
       .get(`${URL}/api/user/listofUsers`)
       .then((response) => setListofusers(response.data))
       .catch((error) => console.error("Error fetching users:", error));
+    axios
+      .get(`${URL}/api/user/getUnreadcount`)
+      .then((response) => setUnreadcount(response.data))
+      .catch((error) => console.error("Error fetching unreadCount:", error.message));
     setProgress(100);
     const socket = io(URL, {
       auth: {
@@ -488,11 +570,28 @@ function WhatsAppClone() {
       },
     });
     socketRef.current = socket;
-    socket.on("receiveMessage", (msg) => {
+    socket.on("receiveMessage", (newMessage) => {
       console.log("message received");
-      setMessages((prevMessages) => [msg, ...prevMessages]);
-    });
+      setMessages((prevMessages) => [newMessage, ...prevMessages]);
 
+    });
+    socket.on("unreadMessages", ({newMessage , unreadmsg}) => {
+      console.log('unreadMessage came!!', unreadmsg);
+      setUnreadcount((prevUnreadCount) => {
+        const updatedUnreadCount = prevUnreadCount.map(item => {
+          if (item.phone === newMessage.sender_id) {
+            return { ...item, unreadCount: unreadmsg };
+          }
+          return item;
+        });
+        // If the sender is not in the unreadCount array, add them
+        if (!updatedUnreadCount.some(item => item.phone === newMessage.sender_id)) {
+          updatedUnreadCount.push({ phone: newMessage.sender_id, unreadCount: unreadmsg });
+        }
+        return updatedUnreadCount;
+      });
+      console.log(unreadCount);
+    })
     return () => {
       socket.disconnect();
     };
@@ -517,6 +616,8 @@ function WhatsAppClone() {
   const loadChat = useCallback(async (chat) => {
     console.log(chat);
     setCurrentuser(chat);
+    socketRef.current.emit('changeUser', chat);
+    socketRef.current.emit('updateReadcount', chat.phoneNumber);
     setPage(1);
     setHasMore(true);
     setProgress(30);
@@ -528,6 +629,11 @@ function WhatsAppClone() {
       });
       setMessages(response.data.messages);
       setHasMore(response.data.hasMore);
+      setUnreadcount(prevUnreadCount =>
+        prevUnreadCount.map(item =>
+          item.phone === chat.phoneNumber ? { ...item, unreadCount: 0 } : item
+        )
+      );
       setProgress(100);
     } catch (error) {
       console.error("Error loading chat:", error);
@@ -597,6 +703,7 @@ function WhatsAppClone() {
           listofUsers={listofUsers}
           loadChat={loadChat}
           searchTerm={searchTerm}
+          unreadCount={unreadCount}
         />
       </Sidebar>
       <ChatArea>
@@ -608,14 +715,6 @@ function WhatsAppClone() {
                 <Typography variant="h6">{currentUser.name}</Typography>
               </Toolbar>
             </ChatHeader>
-
-            {/* <Messages>
-                            <MessageList
-                                messages={messages}
-                                vendorNumber={vendorNumber}
-                                onMediaClick={handleMediaClick}
-                            />
-                        </Messages> */}
             <Messages
               id="scrollableDiv"
               style={{ display: "flex", flexDirection: "column-reverse" }}
@@ -671,6 +770,7 @@ function WhatsAppClone() {
       )}
     </Root>
   );
+
 }
 
 export default WhatsAppClone;

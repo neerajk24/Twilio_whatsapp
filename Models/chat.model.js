@@ -27,6 +27,7 @@ const messageSchema = new Schema({
 
 const conversationSchema = new Schema({
   participant: { type: String, required: true },
+  unreadCount: { type: Number, default: 0 },
   messages: [messageSchema],
 });
 

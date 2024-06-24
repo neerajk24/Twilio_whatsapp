@@ -34,7 +34,7 @@ export const listofUsers = async (req, res) => {
     // Extract the CaseData array
     const caseDataArray =
       result["soap:Envelope"]["soap:Body"][0]["CallStoredProcedureResponse"][0][
-        "CallStoredProcedureResult"
+      "CallStoredProcedureResult"
       ][0]["CaseData"];
 
     // Format the data as required
@@ -135,3 +135,19 @@ export const getChatbyNumber = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
+
+export const getUnreadcount = async (req, res) => {
+  try {
+    const conversations = await Conversation.find({});
+    const unreadCountsArray = conversations.map(conv => ({
+      phone: conv.participant,
+      unreadCount: conv.unreadCount
+    }));
+
+    res.status(200).json(unreadCountsArray);
+  } catch (error) {
+    console.error('Error fetching unread counts:', error);
+    res.status(500).json({ message: 'Error fetching unread counts' });
+  }
+
+}
