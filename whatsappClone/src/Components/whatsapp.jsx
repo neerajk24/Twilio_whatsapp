@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback , useMemo} from "react";
 import { styled } from "@mui/material/styles";
 import axios from "axios";
 import io from "socket.io-client";
@@ -455,7 +455,9 @@ const ExpandedMediaView = ({ media, onClose }) => {
 
 const ChatListComponent = React.memo(
   ({ listofUsers, loadChat, searchTerm, unreadCount }) => {
-    const filteredUsers = listofUsers.filter(
+    const sortedUsers = useMemo(() => sortUsersWithUnread([...listofUsers], unreadCount), [listofUsers, unreadCount]);
+
+    const filteredUsers = sortedUsers.filter(
       (user) =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.caseId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -539,6 +541,30 @@ const SearchBarComponent = React.memo(({ setSearchTerm }) => (
   </SearchBar>
 ));
 
+// Place this outside of your WhatsAppClone component, perhaps in a utils.js file
+
+export const sortUsersWithUnread = (users, unreadCount) => {
+  // Separate users with unread messages
+  const usersWithUnread = users.filter(user =>
+    unreadCount.some(item => item.phone === user.phoneNumber && item.unreadCount > 0)
+  );
+
+  // Users without unread messages
+  const usersWithoutUnread = users.filter(user =>
+    !unreadCount.some(item => item.phone === user.phoneNumber && item.unreadCount > 0)
+  );
+
+  // Sort users with unread messages by their unread count (descending)
+  usersWithUnread.sort((a, b) => {
+    const unreadA = unreadCount.find(item => item.phone === a.phoneNumber)?.unreadCount || 0;
+    const unreadB = unreadCount.find(item => item.phone === b.phoneNumber)?.unreadCount || 0;
+    return unreadB - unreadA;
+  });
+
+  // Concatenate the sorted unread users with the rest of the users
+  return [...usersWithUnread, ...usersWithoutUnread];
+};
+
 function WhatsAppClone() {
   const [listofUsers, setListofusers] = useState([]);
   const [currentUser, setCurrentuser] = useState(null);
@@ -575,7 +601,7 @@ function WhatsAppClone() {
       setMessages((prevMessages) => [newMessage, ...prevMessages]);
 
     });
-    socket.on("unreadMessages", ({newMessage , unreadmsg}) => {
+    socket.on("unreadMessages", ({ newMessage, unreadmsg }) => {
       console.log('unreadMessage came!!', unreadmsg);
       setUnreadcount((prevUnreadCount) => {
         const updatedUnreadCount = prevUnreadCount.map(item => {
@@ -584,14 +610,22 @@ function WhatsAppClone() {
           }
           return item;
         });
-        // If the sender is not in the unreadCount array, add them
         if (!updatedUnreadCount.some(item => item.phone === newMessage.sender_id)) {
           updatedUnreadCount.push({ phone: newMessage.sender_id, unreadCount: unreadmsg });
         }
         return updatedUnreadCount;
       });
-      console.log(unreadCount);
-    })
+
+      // Move the user with new unread messages to the top
+      setListofusers(prevUsers => {
+        const userIndex = prevUsers.findIndex(user => user.phoneNumber === newMessage.sender_id);
+        if (userIndex > -1) {
+          const [user] = prevUsers.splice(userIndex, 1);
+          return [user, ...prevUsers];
+        }
+        return prevUsers;
+      });
+    });
     return () => {
       socket.disconnect();
     };
