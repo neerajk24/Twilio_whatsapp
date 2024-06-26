@@ -5,7 +5,14 @@ import axios from "axios";
 import { parseString } from "xml2js";
 import { promisify } from "util";
 import { sendWhatsAppMessage } from "../../Services/twilio.service.js";
-
+import {
+  generateAccountSASQueryParameters,
+  AccountSASPermissions,
+  AccountSASServices,
+  AccountSASResourceTypes,
+  StorageSharedKeyCredential,
+  SASProtocol,
+} from "@azure/storage-blob";
 const parseXml = promisify(parseString);
 
 export const listofUsers = async (req, res) => {
@@ -69,9 +76,13 @@ send the message to frontend through sockets.
 export const sendMessage = async (req, res) => {
   try {
     const { message } = req.body;
+    const contentToSend = message.content || null;
+    const contentLinkToSend = message.content_link || null;
+
     const response = await sendWhatsAppMessage(
       message.receiver_id,
-      message.content
+      contentToSend,
+      contentLinkToSend
     );
     let data = await Conversation.findOne({ participant: message.receiver_id });
     if (!data) {
@@ -151,3 +162,38 @@ export const getUnreadcount = async (req, res) => {
   }
 
 }
+
+export const generateSasurl = async (req, res) => {
+  const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
+  const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
+  const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
+
+  try {
+    const sharedKeyCredential = new StorageSharedKeyCredential(
+      accountName,
+      accountKey
+    );
+
+    const startTime = new Date(new Date().valueOf() - 5 * 60 * 1000);
+    const expiryTime = new Date(new Date().valueOf() + 60 * 60 * 1000); // 60 minutes from now
+
+    const sasOptions = {
+      services: AccountSASServices.parse("btqf").toString(), // blobs, tables, queues, files
+      resourceTypes: AccountSASResourceTypes.parse("sco").toString(), // service, container, object
+      permissions: AccountSASPermissions.parse("rwcal").toString(), // read, write, create, add, list
+      protocol: SASProtocol.HttpsAndHttp,
+      startsOn: startTime,
+      expiresOn: expiryTime,
+    };
+
+    const sasToken = generateAccountSASQueryParameters(
+      sasOptions,
+      sharedKeyCredential
+    ).toString();
+    const sasUrl = `https://${accountName}.blob.core.windows.net/${containerName}?${sasToken}`;
+    // Send the SAS Url to the client
+    res.status(200).json(sasUrl);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

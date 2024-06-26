@@ -7,6 +7,9 @@ import { Server } from "socket.io";
 import http from "http";
 import { queueService } from "./Services/queue.service.js";
 import Conversation from "./Models/chat.model.js";
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Connect to MongoDB
 connectDB();
@@ -143,7 +146,7 @@ process.on("SIGINT", async () => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.WEBSITES_PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

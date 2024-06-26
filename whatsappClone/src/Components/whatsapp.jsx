@@ -25,6 +25,7 @@ import {
   IconButton,
   Divider,
   Badge,
+  Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SendIcon from "@mui/icons-material/Send";
@@ -33,11 +34,11 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 const URL = import.meta.env.VITE_API_URL;
 console.log(URL);
 
-const Root = styled("div")({
+const Root = styled("div")(({ theme, activeService }) => ({
   display: "flex",
   height: "100vh",
-  backgroundColor: "#dadbd3",
-});
+  backgroundColor: activeService === 'sms' ? "#e6ecf0" : "#dadbd3", // Default to WhatsApp background
+}));
 
 const Sidebar = styled(Paper)({
   flex: "0 0 30%",
@@ -47,25 +48,26 @@ const Sidebar = styled(Paper)({
   backgroundColor: "#ffffff",
 });
 
-const ChatArea = styled(Paper)({
+const ChatArea = styled(Paper)(({ theme, activeService }) => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  backgroundColor: "#e5ddd5",
-});
+  backgroundColor: activeService === 'sms' ? "#ffffff" : "#e5ddd5", // Default to WhatsApp chat background
+}));
 
-const SidebarHeader = styled(AppBar)({
+const SidebarHeader = styled(AppBar)(({ theme, activeService }) => ({
   position: "static",
-  backgroundColor: "#00a884",
+  backgroundColor: activeService === 'sms' ? "#0088cc" : "#00a884", // Default to WhatsApp green
   boxShadow: "none",
-});
+}));
 
-const ChatHeader = styled(AppBar)({
+
+const ChatHeader = styled(AppBar)(({ theme, activeService }) => ({
   position: "static",
-  backgroundColor: "#f0f2f5",
+  backgroundColor: activeService === 'sms' ? "#ffffff" : "#f0f2f5", // Default to WhatsApp chat header
   boxShadow: "none",
   color: "#000",
-});
+}));
 
 const SearchBar = styled("div")({
   padding: "8px 16px",
@@ -88,12 +90,12 @@ const Messages = styled("div")({
   backgroundSize: "contain",
 });
 
-const InputArea = styled("div")({
+const InputArea = styled("div")(({ theme, activeService }) => ({
   display: "flex",
   alignItems: "center",
   padding: "10px 16px",
-  backgroundColor: "#f0f2f5",
-});
+  backgroundColor: activeService === 'sms' ? "#ffffff" : "#f0f2f5", // Default to WhatsApp input area
+}));
 
 const Input = styled(InputBase)({
   flex: 1,
@@ -103,13 +105,15 @@ const Input = styled(InputBase)({
   marginRight: 8,
 });
 
-const MessageBubble = styled("div")(({ sent }) => ({
+const MessageBubble = styled("div")(({ sent, activeService }) => ({
   maxWidth: "70%",
   padding: "8px 12px",
   borderRadius: sent ? "8px 0 8px 8px" : "0 8px 8px 8px",
   marginBottom: "8px",
   wordWrap: "break-word",
-  backgroundColor: sent ? "#dcf8c6" : "#fff",
+  backgroundColor: sent
+    ? (activeService === 'sms' ? "#e3f2fd" : "#dcf8c6") // Default to WhatsApp green for sent messages
+    : "#fff",
   alignSelf: sent ? "flex-end" : "flex-start",
   boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
 }));
@@ -289,29 +293,6 @@ const MessageContent = ({ message, onMediaClick }) => {
   );
 };
 
-// const MessageList = ({ messages, vendorNumber, onMediaClick }) => {
-//     const messagesEndRef = useRef(null);
-
-//     const scrollToBottom = () => {
-//         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-//     };
-
-//     useEffect(scrollToBottom, [messages]);
-
-//     return (
-//         <MessageContainer>
-//             {messages.map((message, index) => (
-//                 <MessageBubble key={message._id || index} sent={message.sender_id === vendorNumber}>
-//                     <MessageContent message={message} onMediaClick={onMediaClick} />
-//                     <Timestamp>
-//                         {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-//                     </Timestamp>
-//                 </MessageBubble>
-//             ))}
-//             <div ref={messagesEndRef} />
-//         </MessageContainer>
-//     );
-// };
 
 const MessageList = ({ messages, vendorNumber, onMediaClick }) => {
   return (
@@ -419,35 +400,6 @@ const ExpandedMediaView = ({ media, onClose }) => {
     </div>
   );
 };
-
-// const ChatListComponent = React.memo(
-//   ({ listofUsers, loadChat, searchTerm }) => {
-//     const filteredUsers = listofUsers.filter(
-//       (user) =>
-//         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//         user.caseId.toLowerCase().includes(searchTerm.toLowerCase())
-//     );
-
-//     return (
-//       <ChatList>
-//         {filteredUsers.map((chat) => (
-//           <React.Fragment key={chat.id}>
-//             <ListItem button onClick={() => loadChat(chat)}>
-//               <ListItemAvatar>
-//                 <Avatar>{chat.name.charAt(0)}</Avatar>
-//               </ListItemAvatar>
-//               <ListItemText
-//                 primary={`${chat.name} (${chat.caseId})`}
-//                 secondary={chat.lastMessage}
-//               />
-//             </ListItem>
-//             <Divider />
-//           </React.Fragment>
-//         ))}
-//       </ChatList>
-//     );
-//   }
-// );
 
 const ChatListComponent = React.memo(
   ({ listofUsers, loadChat, searchTerm, unreadCount }) => {
@@ -578,6 +530,8 @@ function WhatsAppClone() {
   const [progress, setProgress] = useState(0);
   const [unreadCount, setUnreadcount] = useState([]);
   const [media, setMedia] = useState({ contentType: null, contentLink: null });
+  const [activeService, setActiveService] = useState('whatsapp');
+
   const scrollToNewMessage = () => {
     const scrollableDiv = document.getElementById('scrollableDiv');
     if (scrollableDiv && scrollableDiv.scrollTop === 0) {
@@ -641,7 +595,7 @@ function WhatsAppClone() {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [activeService]);
   const handleMediaClick = (media) => {
     setExpandedMedia(media);
   };
@@ -694,15 +648,6 @@ function WhatsAppClone() {
       }
     }
   };
-
-  // const loadChat = useCallback(async (chat) => {
-  //     console.log(chat);
-  //     setCurrentuser(chat);
-  //     const response = await axios.post(`${URL}/api/user/getChatbyNumber`, {
-  //         number: chat.phoneNumber
-  //     });
-  //     setMessages(response.data);
-  // }, []);
 
   const loadChat = useCallback(async (chat) => {
     console.log(chat);
@@ -793,13 +738,54 @@ function WhatsAppClone() {
       }
     }
   }, [content, currentUser, media, vendorNumber]);
+
+  const handleServiceChange = (service) => {
+    if(activeService===service){
+      return;
+    }
+    setActiveService(service);
+    resetAppState();
+  };
+
+  const resetAppState = () => {
+    setProgress(20);
+    setListofusers([]);
+    setCurrentuser(null);
+    setContent("");
+    setMessages([]);
+    setSearchTerm("");
+    setPage(1);
+    setHasMore(true);
+    setUnreadcount([]);
+    setMedia({ contentType: null, contentLink: null });
+    setProgress(100)
+  };
   return (
-    <Root>
+    <Root activeService={activeService}>
       <LoadingBar color="#f11946" progress={progress} height={4} />
       <Sidebar>
-        <SidebarHeader position="static">
+        <SidebarHeader position="static" activeService={activeService}>
           <Toolbar>
-            <Typography variant="h6">Twilio Chat</Typography>
+            <Typography variant="h6" style={{ flexGrow: 1 }}>Twilio Chat</Typography>
+            <Button
+              color="inherit"
+              onClick={() => handleServiceChange('whatsapp')}
+              style={{
+                backgroundColor: activeService === 'whatsapp' ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                marginRight: '8px'
+              }}
+            >
+              WhatsApp
+            </Button>
+            <Button
+              color="inherit"
+              onClick={() => handleServiceChange('sms')}
+              style={{
+                backgroundColor: activeService === 'sms' ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+              }}
+            >
+              SMS
+            </Button>
           </Toolbar>
         </SidebarHeader>
         <SearchBarComponent setSearchTerm={setSearchTerm} />
@@ -810,10 +796,10 @@ function WhatsAppClone() {
           unreadCount={unreadCount}
         />
       </Sidebar>
-      <ChatArea>
+      <ChatArea activeService={activeService}>
         {currentUser ? (
           <>
-            <ChatHeader position="static">
+            <ChatHeader position="static" activeService={activeService}>
               <Toolbar>
                 <Avatar sx={{ mr: 2 }}>{currentUser.name.charAt(0)}</Avatar>
                 <Typography variant="h6">{currentUser.name}</Typography>
