@@ -9,6 +9,7 @@ import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import InfiniteScroll from "react-infinite-scroll-component";
 import LoadingBar from "react-top-loading-bar";
+import { BlobServiceClient } from "@azure/storage-blob";
 
 import {
   AppBar,
@@ -29,7 +30,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import SendIcon from "@mui/icons-material/Send";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 
-const URL = "http://localhost:5000";
+const URL = import.meta.env.VITE_API_URL;
+console.log(URL);
 
 const Root = styled("div")({
   display: "flex",
@@ -130,7 +132,7 @@ const SearchInput = styled(InputBase)({
 });
 
 const InputField = React.memo(
-  ({ content, setContent, sendMessage, setContentType, setContentLink }) => (
+  ({ content, setContent, sendMessage, onFileSelect }) => (
     <InputArea>
       <Input
         placeholder="Type a message"
@@ -149,14 +151,7 @@ const InputField = React.memo(
         id="raised-button-file"
         multiple
         type="file"
-        onChange={(e) => {
-          const file = e.target.files[0];
-          if (file) {
-            setContentType(file.type);
-            // You'll need to implement a function to upload the file and get a link
-            uploadFile(file).then((link) => setContentLink(link));
-          }
-        }}
+        onChange={onFileSelect}
       />
       <label htmlFor="raised-button-file">
         <IconButton component="span">
@@ -169,7 +164,6 @@ const InputField = React.memo(
     </InputArea>
   )
 );
-
 const MessageContent = ({ message, onMediaClick }) => {
   const renderMedia = () => {
     switch (message.content_type) {
@@ -184,6 +178,7 @@ const MessageContent = ({ message, onMediaClick }) => {
               maxHeight: "200px",
               borderRadius: "8px",
               cursor: "pointer",
+              marginBottom: "8px",
             }}
             onClick={() => onMediaClick(message)}
           />
@@ -199,6 +194,7 @@ const MessageContent = ({ message, onMediaClick }) => {
               height: "200px",
               borderRadius: "8px",
               overflow: "hidden",
+              marginBottom: "8px",
             }}
           >
             <video
@@ -236,6 +232,7 @@ const MessageContent = ({ message, onMediaClick }) => {
               padding: "8px",
               borderRadius: "8px",
               cursor: "pointer",
+              marginBottom: "8px",
             }}
             onClick={() => onMediaClick(message)}
           >
@@ -253,6 +250,7 @@ const MessageContent = ({ message, onMediaClick }) => {
               padding: "8px",
               borderRadius: "8px",
               cursor: "pointer",
+              marginBottom: "8px",
             }}
             onClick={() => onMediaClick(message)}
           >
@@ -270,6 +268,7 @@ const MessageContent = ({ message, onMediaClick }) => {
               padding: "8px",
               borderRadius: "8px",
               cursor: "pointer",
+              marginBottom: "8px",
             }}
             onClick={() => onMediaClick(message)}
           >
@@ -284,11 +283,8 @@ const MessageContent = ({ message, onMediaClick }) => {
 
   return (
     <div>
-      {message.content_type === "text" ? (
-        <Typography>{message.content}</Typography>
-      ) : (
-        renderMedia()
-      )}
+      {message.content_link && renderMedia()}
+      {message.content && <Typography>{message.content}</Typography>}
     </div>
   );
 };
@@ -581,6 +577,7 @@ function WhatsAppClone() {
   const [hasMore, setHasMore] = useState(true);
   const [progress, setProgress] = useState(0);
   const [unreadCount, setUnreadcount] = useState([]);
+  const [media, setMedia] = useState({ contentType: null, contentLink: null });
   const scrollToNewMessage = () => {
     const scrollableDiv = document.getElementById('scrollableDiv');
     if (scrollableDiv && scrollableDiv.scrollTop === 0) {
@@ -651,6 +648,51 @@ function WhatsAppClone() {
 
   const handleCloseExpandedMedia = () => {
     setExpandedMedia(null);
+  };
+
+  const uploadToBlob = async (file) => {
+    try {
+      setProgress(30);
+
+      // Fetch the SAS URL from the backend
+      const response = await axios.get(`${URL}/api/user/getSasurl`);
+      const sasUrl = response.data;
+
+      // Create BlobServiceClient with the SAS URL
+      const blobServiceClient = new BlobServiceClient(sasUrl);
+      const containerClient =
+        blobServiceClient.getContainerClient("Twilio_media");
+
+      // Generate unique blob name
+      const blobName = `${new Date().getTime()}-${file.name}`;
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+      // Upload the file to Azure Blob Storage
+      await blockBlobClient.uploadData(file);
+      console.log("File uploaded to Azure Blob Storage successfully");
+      setProgress(100);
+      // Return the file URL
+      return blockBlobClient.url;
+    } catch (error) {
+      console.error("Error uploading file to Azure Blob Storage:", error);
+      throw error;
+    }
+  };
+
+
+  const handleFileSelect = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      try {
+        // You'll need to implement a function to upload the file and get a link
+        const link = await uploadToBlob(file);
+        console.log(link);
+        setMedia({ contentType: file.type, contentLink: link });
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        // Handle the error appropriately
+      }
+    }
   };
 
   // const loadChat = useCallback(async (chat) => {
@@ -725,19 +767,23 @@ function WhatsAppClone() {
   };
 
   const sendMessage = useCallback(async () => {
-    if (content.trim() !== "" && currentUser) {
+    if (currentUser && (content.trim() !== "" || media.contentLink)) {
       const newMessage = {
         sender_id: vendorNumber,
         receiver_id: currentUser.phoneNumber,
-        content: content,
-        content_type: "text",
-        content_link: null,
+        content: content.trim(),
+        content_type: media.contentType || "text",
+        content_link: media.contentLink,
         timestamp: new Date(),
         is_read: false,
       };
+
       setMessages((prevMessages) => [newMessage, ...prevMessages]);
       setContent("");
+      setMedia({ contentType: null, contentLink: null });
+
       try {
+        console.log("sending message", newMessage);
         await axios.post(`${URL}/api/user/sendMessage`, {
           message: newMessage,
         });
@@ -746,7 +792,7 @@ function WhatsAppClone() {
         console.log("Error in sending message", error.message);
       }
     }
-  }, [content, currentUser]);
+  }, [content, currentUser, media, vendorNumber]);
   return (
     <Root>
       <LoadingBar color="#f11946" progress={progress} height={4} />
@@ -804,6 +850,7 @@ function WhatsAppClone() {
               content={content}
               setContent={setContent}
               sendMessage={sendMessage}
+              onFileSelect={handleFileSelect}
             />
           </>
         ) : (
