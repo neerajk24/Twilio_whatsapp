@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import connectDB from "./Config/databaseConnection.js";
-import Socketroute from "./api/Routes/socketChat.route.js";
 import userRoute from "./api/Routes/user.route.js";
 import { Server } from "socket.io";
 import http from "http";
@@ -23,7 +22,6 @@ app.use(express.json());
 
 // Routes
 app.use("/api/user", userRoute);
-app.use("/api/sockets", Socketroute);
 
 // Create HTTP server and initialize Socket.io
 const server = http.createServer(app);

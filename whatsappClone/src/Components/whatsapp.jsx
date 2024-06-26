@@ -105,15 +105,13 @@ const Input = styled(InputBase)({
   marginRight: 8,
 });
 
-const MessageBubble = styled("div")(({ sent, activeService }) => ({
+const MessageBubble = styled("div")(({ sent }) => ({
   maxWidth: "70%",
   padding: "8px 12px",
   borderRadius: sent ? "8px 0 8px 8px" : "0 8px 8px 8px",
   marginBottom: "8px",
   wordWrap: "break-word",
-  backgroundColor: sent
-    ? (activeService === 'sms' ? "#e3f2fd" : "#dcf8c6") // Default to WhatsApp green for sent messages
-    : "#fff",
+  backgroundColor: sent ? "#dcf8c6" : "#fff",
   alignSelf: sent ? "flex-end" : "flex-start",
   boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
 }));
@@ -134,6 +132,27 @@ const SearchInput = styled(InputBase)({
   marginLeft: 8,
   flex: 1,
 });
+const DateSeparator = styled('div')({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  margin: '10px 0',
+});
+
+const DateBadge = styled('span')({
+  backgroundColor: '#e1f3fb',
+  color: '#5b5b5b',
+  padding: '5px 12px',
+  borderRadius: '8px',
+  fontSize: '0.75rem',
+  fontWeight: 'bold',
+});
+
+const MessageDateSeparator = ({ date }) => (
+  <DateSeparator>
+    <DateBadge>{date}</DateBadge>
+  </DateSeparator>
+);
 
 const InputField = React.memo(
   ({ content, setContent, sendMessage, onFileSelect }) => (
@@ -294,23 +313,52 @@ const MessageContent = ({ message, onMediaClick }) => {
 };
 
 
-const MessageList = ({ messages, vendorNumber, onMediaClick }) => {
+const MessageList = ({ messages, vendorNumber, onMediaClick, activeService }) => {
+  const formatDate = (date) => {
+    const today = new Date();
+    const messageDate = new Date(date);
+
+    if (messageDate.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (messageDate.toDateString() === new Date(today.setDate(today.getDate() - 1)).toDateString()) {
+      return 'Yesterday';
+    } else {
+      return messageDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+  };
+
+  let currentDate = null;
+
   return (
     <MessageContainer>
-      {[...messages].reverse().map((message, index) => (
-        <MessageBubble
-          key={message._id || index}
-          sent={message.sender_id === vendorNumber}
-        >
-          <MessageContent message={message} onMediaClick={onMediaClick} />
-          <Timestamp>
-            {new Date(message.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Timestamp>
-        </MessageBubble>
-      ))}
+      {[...messages].reverse().map((message, index) => {
+        const messageDate = new Date(message.timestamp);
+        const formattedDate = formatDate(messageDate);
+        let dateSeparator = null;
+
+        if (formattedDate !== currentDate) {
+          dateSeparator = <MessageDateSeparator key={`date-${index}`} date={formattedDate} />;
+          currentDate = formattedDate;
+        }
+
+        return (
+          <React.Fragment key={message._id || `message-${index}`}>
+            {dateSeparator}
+            <MessageBubble
+              sent={message.sender_id === vendorNumber}
+              activeService={activeService}
+            >
+              <MessageContent message={message} onMediaClick={onMediaClick} />
+              <Timestamp>
+                {messageDate.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Timestamp>
+            </MessageBubble>
+          </React.Fragment>
+        );
+      })}
     </MessageContainer>
   );
 };
@@ -740,7 +788,7 @@ function WhatsAppClone() {
   }, [content, currentUser, media, vendorNumber]);
 
   const handleServiceChange = (service) => {
-    if(activeService===service){
+    if (activeService === service) {
       return;
     }
     setActiveService(service);
