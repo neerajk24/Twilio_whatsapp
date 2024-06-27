@@ -564,6 +564,10 @@ export const sortUsersWithUnread = (users, unreadCount) => {
   return [...usersWithUnread, ...usersWithoutUnread];
 };
 
+const whatsapp = "14155238886";
+const sms = "441173256790";
+
+
 function WhatsAppClone() {
   const [listofUsers, setListofusers] = useState([]);
   const [currentUser, setCurrentuser] = useState(null);
@@ -572,7 +576,7 @@ function WhatsAppClone() {
   const [searchTerm, setSearchTerm] = useState("");
   const socketRef = useRef(null);
   const [expandedMedia, setExpandedMedia] = useState(null);
-  const vendorNumber = "14155238886";
+  const [vendorNumber , setVendorNumber] = useState(whatsapp);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -586,7 +590,6 @@ function WhatsAppClone() {
       scrollableDiv.scrollTop = 0;
     }
   };
-
   useEffect(() => {
     if (messages.length > 0) {
       scrollToNewMessage();
@@ -706,10 +709,12 @@ function WhatsAppClone() {
     setHasMore(true);
     setProgress(30);
     try {
+      console.log(activeService);
       const response = await axios.post(`${URL}/api/user/getChatbyNumber`, {
         number: chat.phoneNumber,
         page: 1,
         limit: 20,
+        type: activeService
       });
       setMessages(response.data.messages);
       setHasMore(response.data.hasMore);
@@ -723,7 +728,7 @@ function WhatsAppClone() {
       console.error("Error loading chat:", error);
       setProgress(100);
     }
-  }, []);
+  }, [activeService]);
 
   const loadMoreMessages = async () => {
     if (!hasMore) return;
@@ -734,6 +739,7 @@ function WhatsAppClone() {
         number: currentUser.phoneNumber,
         page: nextPage,
         limit: 20,
+        type: activeService
       });
 
       const scrollableDiv = document.getElementById('scrollableDiv');
@@ -779,19 +785,26 @@ function WhatsAppClone() {
         console.log("sending message", newMessage);
         await axios.post(`${URL}/api/user/sendMessage`, {
           message: newMessage,
+          type: activeService
         });
         scrollToNewMessage();
       } catch (error) {
         console.log("Error in sending message", error.message);
       }
     }
-  }, [content, currentUser, media, vendorNumber]);
+  }, [content, currentUser, media, activeService]);
 
   const handleServiceChange = (service) => {
     if (activeService === service) {
       return;
     }
     setActiveService(service);
+    if(service==='whatsapp'){
+      setVendorNumber(whatsapp);
+    }
+    else{
+      setVendorNumber(sms);
+    }
     resetAppState();
   };
 
@@ -910,7 +923,6 @@ function WhatsAppClone() {
       )}
     </Root>
   );
-
 }
 
 export default WhatsAppClone;

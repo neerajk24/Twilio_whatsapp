@@ -4,7 +4,7 @@ import Conversation from "../../Models/chat.model.js";
 import axios from "axios";
 import { parseString } from "xml2js";
 import { promisify } from "util";
-import { sendWhatsAppMessage } from "../../Services/twilio.service.js";
+import { sendWhatsAppMessage, sendSMSMessage } from "../../Services/twilio.service.js";
 import {
   generateAccountSASQueryParameters,
   AccountSASPermissions,
@@ -61,40 +61,43 @@ export const listofUsers = async (req, res) => {
   }
 };
 
-// export const receiveMessage = async () => {
-//     const message = await fetchMessagesFromQueue();
-//     console.log(message);
-// going to recieve a message from twilio
-/*  
-this is a post route , 
-the message recieved from twilio should be saved in mongodb in the correct message format
-the message should me converted into json if not converted..
-send the message to frontend through sockets.
-*/
-// }
-
 export const sendMessage = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, type } = req.body;
     const contentToSend = message.content || null;
     const contentLinkToSend = message.content_link || null;
-
-    const response = await sendWhatsAppMessage(
-      message.receiver_id,
-      contentToSend,
-      contentLinkToSend
-    );
+    let response;
+    if (type === 'whatsapp') {
+      response = await sendWhatsAppMessage(
+        message.receiver_id,
+        contentToSend,
+        contentLinkToSend
+      );
+    }
+    else {
+      response = await sendSMSMessage(
+        message.receiver_id,
+        contentToSend,
+        contentLinkToSend
+      );
+    }
     let data = await Conversation.findOne({ participant: message.receiver_id });
     if (!data) {
       data = new Conversation({
         participant: message.receiver_id,
         messages: [],
+        sms: [],
       });
       console.log("new Convo created");
     }
     message["messageSid"] = response.messageSid;
     message["accountSid"] = response.accountSid;
-    data.messages.push(message);
+    if (type === 'whatsapp') {
+      data.messages.push(message);
+    }
+    else {
+      data.sms.push(message);
+    }
     await data.save();
     console.log("Data saved in mongo successfully");
     res.status(200).json({
@@ -107,35 +110,31 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// export const getChatbyNumber = async (req, res) => {
-//     try {
-//         const { number } = req.body;
-//         const data = await Conversation.findOne({ participant: number });
-//         let response = [];
-//         if (data) {
-//             response = data.messages;
-//         }
-//         res.status(200).json(response);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Internal server error', error: error.message });
-
-//     }
-// }
-
 export const getChatbyNumber = async (req, res) => {
   try {
-    const { number, page = 1, limit = 20 } = req.body; // page and limit for pagination
+    console.log('GettingChat..');
+    const { number, page = 1, limit = 20, type } = req.body; // page and limit for pagination
     const skip = (page - 1) * limit; // calculate the number of documents to skip
 
     const data = await Conversation.findOne({ participant: number });
     let response = { messages: [], hasMore: false };
 
     if (data) {
-      const totalMessages = data.messages.length;
-      response.messages = data.messages
-        .slice()
-        .reverse()
-        .slice(skip, skip + limit); // reverse and paginate
+      let totalMessages;
+      if (type === 'whatsapp') {
+        totalMessages = data.messages.length;
+        response.messages = data.messages
+          .slice()
+          .reverse()
+          .slice(skip, skip + limit); // reverse and paginate
+      }
+      else {
+        totalMessages = data.sms.length;
+        response.messages = data.sms
+          .slice()
+          .reverse()
+          .slice(skip, skip + limit); // reverse and paginate
+      }
       response.hasMore = skip + limit < totalMessages; // check if there are more messages to load
     }
 

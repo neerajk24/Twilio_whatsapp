@@ -1,13 +1,8 @@
-
-import WhatsAppClone from './Components/whatsapp'
+import WhatsAppClone from './Components/WhatsappClone'
 
 function App() {
-
   return (
-    <>
-      <WhatsAppClone />
-    </>
+    <WhatsAppClone />
   )
 }
-
 export default App
