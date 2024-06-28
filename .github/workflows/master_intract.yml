@@ -59,4 +59,4 @@ jobs:
           app-name: 'intract'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AE5E5A16109D4DD0A0EA986AC91D3CA4 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_SMS_WHATSAPP }}
