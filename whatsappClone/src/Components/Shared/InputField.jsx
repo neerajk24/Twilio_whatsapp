@@ -7,7 +7,7 @@ import { InputArea, Input } from "../Styles/StyledComponent";
 import { IconButton, Popover } from "@mui/material";
 import EmojiPicker from 'emoji-picker-react';
 
-const InputField = React.memo(() => {
+const InputField = React.memo(({ activeService }) => {
     const [localContent, setLocalContent] = useState("");
     const { sendMessage, handleFileSelect } = useChatContext();
     const [anchorEl, setAnchorEl] = useState(null);
@@ -65,19 +65,23 @@ const InputField = React.memo(() => {
                 onChange={(event) => setLocalContent(event.target.value)}
                 onKeyPress={handleKeyPress}
             />
-            <input
-                accept="image/*,video/*,audio/*,.pdf"
-                style={{ display: "none" }}
-                id="raised-button-file"
-                multiple
-                type="file"
-                onChange={handleFileSelect}
-            />
-            <label htmlFor="raised-button-file">
-                <IconButton component="span">
-                    <AttachFileIcon />
-                </IconButton>
-            </label>
+            {activeService !== 'sms' && (
+                <>
+                    <input
+                        accept="image/*,video/*,audio/*,.pdf"
+                        style={{ display: "none" }}
+                        id="raised-button-file"
+                        multiple
+                        type="file"
+                        onChange={handleFileSelect}
+                    />
+                    <label htmlFor="raised-button-file">
+                        <IconButton component="span">
+                            <AttachFileIcon />
+                        </IconButton>
+                    </label>
+                </>
+            )}
             <IconButton color="primary" onClick={handleSendMessage}>
                 <SendIcon />
             </IconButton>

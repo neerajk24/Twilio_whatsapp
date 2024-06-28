@@ -76,7 +76,7 @@ export default function WhatsAppClone() {
                 <MessageList />
               </InfiniteScroll>
             </Messages>
-            <InputField />
+            <InputField activeService={activeService} />
           </>
         ) : (
           <div

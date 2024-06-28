@@ -10,7 +10,7 @@ const authToken = process.env.ACCOUNT_AUTH;
 const client = twilio(accountSid, authToken);
 
 const twilioPhoneNumber = 'whatsapp:+14155238886';
-const twilioSMSNumber = '+441173256790'
+const twilioSMSNumber = '+447380300545'
 
 export const sendWhatsAppMessage = async (to, content, contentLink) => {
     console.log(`twilioPhone : ${twilioPhoneNumber} , to : ${to}`);

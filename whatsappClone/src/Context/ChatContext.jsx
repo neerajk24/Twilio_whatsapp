@@ -7,7 +7,7 @@ const ChatContext = createContext();
 export const useChatContext = () => useContext(ChatContext);
 
 const whatsapp = "14155238886";
-const sms = "441173256790";
+const sms = "447380300545";
 const URL = import.meta.env.VITE_API_URL;
 
 
@@ -48,7 +48,7 @@ export const ChatProvider = ({ children }) => {
       .then((response) => setListofusers(response.data))
       .catch((error) => console.error("Error fetching users:", error));
     axios
-      .get(`${URL}/api/user/getUnreadcount`)
+      .get(`${URL}/api/user/getUnreadcount/?service=${activeService}`)
       .then((response) => setUnreadcount(response.data))
       .catch((error) => console.error("Error fetching unreadCount:", error.message));
     setProgress(100);
@@ -59,6 +59,7 @@ export const ChatProvider = ({ children }) => {
     });
     socketRef.current = socket;
     socket.on("receiveMessage", (newMessage) => {
+
       console.log("message received");
       setMessages((prevMessages) => [newMessage, ...prevMessages]);
       scrollToNewMessage();
@@ -111,7 +112,7 @@ export const ChatProvider = ({ children }) => {
       // Create BlobServiceClient with the SAS URL
       const blobServiceClient = new BlobServiceClient(sasUrl);
       const containerClient =
-        blobServiceClient.getContainerClient("Twilio_media");
+        blobServiceClient.getContainerClient("Twilio_media_storage");
 
       // Generate unique blob name
       const blobName = `${new Date().getTime()}-${file.name}`;
@@ -135,9 +136,11 @@ export const ChatProvider = ({ children }) => {
     if (file) {
       try {
         // You'll need to implement a function to upload the file and get a link
-        const link = await uploadToBlob(file);
+        const baseURL = await uploadToBlob(file);
+        const link = baseURL.split("?")[0];
         console.log(link);
         setMedia({ contentType: file.type, contentLink: link });
+
       } catch (error) {
         console.error("Error uploading file:", error);
         // Handle the error appropriately
@@ -149,7 +152,7 @@ export const ChatProvider = ({ children }) => {
     console.log(chat);
     setCurrentuser(chat);
     socketRef.current.emit('changeUser', chat);
-    socketRef.current.emit('updateReadcount', chat.phoneNumber);
+    socketRef.current.emit('updateReadcount', {count : chat.phoneNumber , activeService});
     setPage(1);
     setHasMore(true);
     setProgress(30);

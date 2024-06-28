@@ -148,10 +148,11 @@ export const getChatbyNumber = async (req, res) => {
 
 export const getUnreadcount = async (req, res) => {
   try {
+    const service = req.query.service;
     const conversations = await Conversation.find({});
     const unreadCountsArray = conversations.map(conv => ({
       phone: conv.participant,
-      unreadCount: conv.unreadCount
+      unreadCount: service === 'sms' ? conv.unreadSms : conv.unreadCount,
     }));
 
     res.status(200).json(unreadCountsArray);

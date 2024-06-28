@@ -37,17 +37,25 @@ let currentUser = null;
 
 io.on("connection", (socket) => {
   const Userid = socket.handshake.auth.userid;
-  console.log("A user connected", Userid);
-  connectedSockets.push({
-    socketId: socket.id,
-    Userid,
-  });
+  if (!connectedSockets.find((soc) => soc.Userid === Userid)) {
+    console.log("A user connected", Userid);
 
+    connectedSockets.push({
+      socketId: socket.id,
+      Userid,
+    });
+  }
   // Handle socket events here
-  socket.on('updateReadcount', async (count) => {
+  socket.on('updateReadcount', async ({ count, activeService }) => {
     const data = await Conversation.findOne({ participant: count });
     if (data) {
-      data.unreadCount = 0;
+      if (activeService === 'sms') {
+        data.unreadSms = 0;
+      }
+      else {
+        data.unreadCount = 0;
+
+      }
       await data.save();
     }
 
@@ -68,17 +76,26 @@ export { io };
 
 queueService.addMessageHandler(async (messageData) => {
   console.log("Processing message:", messageData);
-  const from = messageData.from.slice(10);
-  const to = messageData.to.slice(10);
+  let from, to;
+  // For New service modify the sender and receiver here.
+  if (messageData.type === 'sms') {
+    from = messageData.from.slice(1);
+    to = messageData.to.slice(1);
+  }
+  else {
+    from = messageData.from.slice(10);
+    to = messageData.to.slice(10);
+  }
   let unreadmsg = null;
-  console.log(from);
   try {
     let data = await Conversation.findOne({ participant: from });
     if (!data) {
       data = new Conversation({
         participant: from,
         messages: [],
+        sms: [],
         unreadCount: 0,
+        unreadSms: 0
       });
       console.log("new Convo created Reciever side...");
     }
@@ -88,6 +105,7 @@ queueService.addMessageHandler(async (messageData) => {
 
     let contentType = "text";
     let contentLink = null;
+
 
     if (messageData.mediaItems && messageData.mediaItems.length > 0) {
       contentType = messageData.mediaItems[0].contentType;
@@ -105,16 +123,29 @@ queueService.addMessageHandler(async (messageData) => {
       timestamp: mongodbTimestamp,
       is_read: false,
     };
-    if (currentUser !== null && currentUser.phoneNumber !== from) {
-      data.unreadCount += 1;
+    if (messageData.type === 'sms') {
+      if (currentUser !== null && currentUser.phoneNumber !== from) {
+        data.unreadSms += 1;
+      }
+      if (currentUser === null) {
+        data.unreadSms += 1;
+      }
     }
-    if (currentUser === null) {
-      data.unreadCount += 1;
-
+    else {
+      if (currentUser !== null && currentUser.phoneNumber !== from) {
+        data.unreadCount += 1;
+      }
+      if (currentUser === null) {
+        data.unreadCount += 1;
+      }
     }
-    console.log(data.unreadCount);
-    unreadmsg = data.unreadCount;
-    data.messages.push(newMessage);
+    unreadmsg = messageData.type === 'sms' ? data.unreadSms : data.unreadCount;
+    if (messageData.type === 'sms') {
+      data.sms.push(newMessage);
+    }
+    else {
+      data.messages.push(newMessage);
+    }
     await data.save();
     console.log("successfully saved message on reciever side..");
     console.log(
@@ -135,7 +166,6 @@ queueService.addMessageHandler(async (messageData) => {
 // Start listening for messages when the app starts
 queueService.startListening().catch(console.error);
 
-// Your routes and other app setup...
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
