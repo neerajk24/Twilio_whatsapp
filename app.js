@@ -7,6 +7,8 @@ import http from "http";
 import { queueService } from "./Services/queue.service.js";
 import Conversation from "./Models/chat.model.js";
 import dotenv from 'dotenv';
+import sgMail from '@sendgrid/mail';
+
 
 dotenv.config();
 
@@ -52,9 +54,11 @@ io.on("connection", (socket) => {
       if (activeService === 'sms') {
         data.unreadSms = 0;
       }
-      else {
+      else if (activeService === 'whatsapp') {
         data.unreadCount = 0;
-
+      }
+      else {
+        data.unreadMails = 0;
       }
       await data.save();
     }

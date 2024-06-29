@@ -130,7 +130,18 @@ const MessageContent = ({ message, onMediaClick }) => {
     return (
         <div>
             {message.content_link && renderMedia()}
-            {message.content && <Typography>{message.content}</Typography>}
+            {message.content && (
+                <Typography
+                    component="pre"
+                    sx={{
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        fontFamily: 'arial',
+                    }}
+                >
+                    {message.content}
+                </Typography>
+            )}
         </div>
     );
 };

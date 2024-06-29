@@ -23,6 +23,15 @@ const MemoizedToolbar = React.memo(({ handleServiceChange, activeService }) => (
         >
             SMS
         </Button>
+        <Button
+            color="inherit"
+            onClick={() => handleServiceChange('mail')}
+            style={{
+                backgroundColor: activeService === 'mail' ? 'rgba(255, 255, 255, 0.2)' : 'transparent'
+            }}
+        >
+            MAIL
+        </Button>
     </Toolbar>
 ));
 

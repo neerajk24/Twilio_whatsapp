@@ -8,14 +8,12 @@ export const useChatContext = () => useContext(ChatContext);
 
 const whatsapp = "14155238886";
 const sms = "447380300545";
+const mail = "neeraj.kumar@dynamatix.com";
 const URL = import.meta.env.VITE_API_URL;
-
-
 
 export const ChatProvider = ({ children }) => {
   const [listofUsers, setListofusers] = useState([]);
   const [currentUser, setCurrentuser] = useState(null);
-  // const [content, setContent] = useState("");
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const socketRef = useRef(null);
@@ -55,7 +53,6 @@ export const ChatProvider = ({ children }) => {
         .get(`${URL}/api/user/getUnreadcount/?service=${activeService}`)
         .then((response) => {console.log(response.data);setUnreadcount(response.data)})
         .catch((error) => console.error("Error fetching unreadCount:", error.message));
-      
     }
     fetchData();
     setProgress(100);
@@ -221,7 +218,7 @@ export const ChatProvider = ({ children }) => {
     }
   }, [currentUser, page, hasMore, activeService]);
 
-  const sendMessage = useCallback(async (content) => {
+  const sendMessage = useCallback(async ({subject , content}) => {
     if (currentUser && (content.trim() !== "" || media.contentLink)) {
       const newMessage = {
         sender_id: vendorNumber,
@@ -231,6 +228,7 @@ export const ChatProvider = ({ children }) => {
         content_link: media.contentLink,
         timestamp: new Date(),
         is_read: false,
+        subject : subject,
       };
 
       setMessages((prevMessages) => [newMessage, ...prevMessages]);
@@ -257,8 +255,11 @@ export const ChatProvider = ({ children }) => {
     if (service === 'whatsapp') {
       setVendorNumber(whatsapp);
     }
-    else {
+    else if(service==='sms') {
       setVendorNumber(sms);
+    }
+    else{
+      setVendorNumber(mail);
     }
     resetAppState();
   }, [activeService]);

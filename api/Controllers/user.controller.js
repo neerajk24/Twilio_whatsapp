@@ -120,6 +120,7 @@ export const getChatbyNumber = async (req, res) => {
     let response = { messages: [], hasMore: false };
 
     if (data) {
+      // Change for a new service
       let totalMessages;
       if (type === 'whatsapp') {
         totalMessages = data.messages.length;
@@ -128,16 +129,22 @@ export const getChatbyNumber = async (req, res) => {
           .reverse()
           .slice(skip, skip + limit); // reverse and paginate
       }
-      else {
+      else if (type === 'sms') {
         totalMessages = data.sms.length;
         response.messages = data.sms
           .slice()
           .reverse()
           .slice(skip, skip + limit); // reverse and paginate
       }
+      else {
+        totalMessages = data.mails.length;
+        response.messages = data.mails
+          .slice()
+          .reverse()
+          .slice(skip, skip + limit); // reverse and paginate
+      }
       response.hasMore = skip + limit < totalMessages; // check if there are more messages to load
     }
-
     res.status(200).json(response);
   } catch (error) {
     res
@@ -151,19 +158,27 @@ export const getUnreadcount = async (req, res) => {
     const service = req.query.service;
     console.log(service);
     const conversations = await Conversation.find({});
-    console.log(conversations);
-    const unreadCountsArray = conversations.map(conv => ({
-      phone: conv.participant,
-      unreadCount: service === 'sms' ? conv.unreadSms : conv.unreadCount,
-    }));
+    const unreadCountsArray = conversations.map(conv => {
+      let unreadCount;
+      if (service === 'sms') {
+        unreadCount = conv.unreadSms;
+      } else if (service === 'mail') {
+        unreadCount = conv.unreadMails;
+      } else {
+        unreadCount = conv.unreadCount;
+      }
+      return {
+        phone: conv.participant,
+        unreadCount: unreadCount,
+      };
+    });
 
     res.status(200).json(unreadCountsArray);
   } catch (error) {
     console.error('Error fetching unread counts:', error);
     res.status(500).json({ message: 'Error fetching unread counts' });
   }
-
-}
+};
 
 export const generateSasurl = async (req, res) => {
   const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;

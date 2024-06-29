@@ -26,20 +26,28 @@ export const Sidebar = styled(Paper)({
 });
 
 export const ChatArea = styled(Paper)(({ theme }) => {
-    const { activeService } = useChatContext();
     return {
         flex: 1,
         display: "flex",
         flexDirection: "column",
-        backgroundColor: activeService === 'sms' ? "#ffffff" : "#e5ddd5",
+        backgroundColor: "#e5ddd5",
     };
 });
 
 export const SidebarHeader = styled(AppBar)(({ theme }) => {
     const { activeService } = useChatContext();
+    let backgroundColor;
+    if (activeService === 'sms') {
+        backgroundColor = "#0088cc";
+    } else if (activeService === 'whatsapp') {
+        backgroundColor = "#00a884";
+    } else if (activeService === 'mail') {
+        backgroundColor = "#D24D57";
+    }
+
     return {
         position: "static",
-        backgroundColor: activeService === 'sms' ? "#0088cc" : "#00a884",
+        backgroundColor,
         boxShadow: "none",
     };
 });
@@ -84,13 +92,14 @@ export const Messages = styled("div")({
     backgroundSize: "contain",
 });
 
-export const Input = styled(InputBase)({
+export const Input = styled(InputBase)(({ noBorderRadius }) => ({
     flex: 1,
     backgroundColor: "#ffffff",
-    borderRadius: 20,
+    borderRadius: noBorderRadius ? 0 : 20,
     padding: "9px 12px",
     marginRight: 8,
-});
+    marginBottom: noBorderRadius ? "10px" : 0,
+}));
 
 export const MessageBubble = styled("div")(({ sent }) => ({
     maxWidth: "70%",
@@ -101,7 +110,7 @@ export const MessageBubble = styled("div")(({ sent }) => ({
     backgroundColor: sent ? "#dcf8c6" : "#fff",
     alignSelf: sent ? "flex-end" : "flex-start",
     boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-    
+
 }));
 
 export const MessageContainer = styled("div")({
