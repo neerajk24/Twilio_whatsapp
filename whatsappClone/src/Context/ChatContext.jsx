@@ -43,14 +43,21 @@ export const ChatProvider = ({ children }) => {
 
   useEffect(() => {
     setProgress(25);
-    axios
-      .get(`${URL}/api/user/listofUsers`)
-      .then((response) => setListofusers(response.data))
-      .catch((error) => console.error("Error fetching users:", error));
-    axios
-      .get(`${URL}/api/user/getUnreadcount/?service=${activeService}`)
-      .then((response) => setUnreadcount(response.data))
-      .catch((error) => console.error("Error fetching unreadCount:", error.message));
+
+    async function fetchData() {
+      await axios
+        .get(`${URL}/api/user/listofUsers`)
+        .then((response) => setListofusers(response.data))
+        .catch((error) => console.error("Error fetching users:", error));
+
+      console.log("fetching the unreadSMS..");
+      await axios
+        .get(`${URL}/api/user/getUnreadcount/?service=${activeService}`)
+        .then((response) => {console.log(response.data);setUnreadcount(response.data)})
+        .catch((error) => console.error("Error fetching unreadCount:", error.message));
+      
+    }
+    fetchData();
     setProgress(100);
     const socket = io(URL, {
       auth: {
@@ -150,9 +157,10 @@ export const ChatProvider = ({ children }) => {
 
   const loadChat = useCallback(async (chat) => {
     console.log(chat);
+    console.log(unreadCount);
     setCurrentuser(chat);
     socketRef.current.emit('changeUser', chat);
-    socketRef.current.emit('updateReadcount', {count : chat.phoneNumber , activeService});
+    socketRef.current.emit('updateReadcount', { count: chat.phoneNumber, activeService });
     setPage(1);
     setHasMore(true);
     setProgress(30);

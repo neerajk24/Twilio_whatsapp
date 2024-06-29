@@ -12,7 +12,7 @@ import { ChatList } from "./Styles/StyledComponent";
 import { useChatContext } from "../Context/ChatContext";
 import { sortUsersWithUnread } from "../utils/sortUsersWithUnread.js";
 
-const MemoizedChatList = React.memo(({ filteredUsers, loadChat, unreadCount }) => (
+const MemoizedChatList = React.memo(({ filteredUsers, loadChat, unreadCount, activeService }) => (
     <ChatList>
         {filteredUsers.map((chat) => (
             <React.Fragment key={chat.id}>
@@ -61,7 +61,18 @@ const MemoizedChatList = React.memo(({ filteredUsers, loadChat, unreadCount }) =
                             color="primary"
                             sx={{
                                 '& .MuiBadge-badge': {
-                                    backgroundColor: '#25D366',
+                                    backgroundColor: (() => {
+                                        switch (activeService) {
+                                            case 'sms':
+                                                return '#1976D2';  // Blue for SMS
+                                            case 'whatsapp':
+                                                return '#25D366';  // Green for WhatsApp
+                                            case 'mail':
+                                                return '#DC3545';  // Red for mail
+                                            default:
+                                                return '#757575';  // Grey as fallback
+                                        }
+                                    })(),
                                     color: 'white',
                                     fontWeight: 'bold',
                                     borderRadius: '50%',
@@ -87,7 +98,7 @@ const MemoizedChatList = React.memo(({ filteredUsers, loadChat, unreadCount }) =
 });
 
 const ChatListComponent = () => {
-    const { listofUsers, loadChat, searchTerm, unreadCount } = useChatContext();
+    const { listofUsers, loadChat, searchTerm, unreadCount, activeService } = useChatContext();
     const sortedUsers = useMemo(() => sortUsersWithUnread([...listofUsers], unreadCount), [listofUsers, unreadCount]);
 
     const filteredUsers = useMemo(() =>
@@ -99,7 +110,7 @@ const ChatListComponent = () => {
         [sortedUsers, searchTerm]
     );
 
-    return <MemoizedChatList filteredUsers={filteredUsers} loadChat={loadChat} unreadCount={unreadCount} />;
+    return <MemoizedChatList filteredUsers={filteredUsers} loadChat={loadChat} unreadCount={unreadCount} activeService={activeService} />;
 };
 
 export default ChatListComponent;

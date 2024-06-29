@@ -149,7 +149,9 @@ export const getChatbyNumber = async (req, res) => {
 export const getUnreadcount = async (req, res) => {
   try {
     const service = req.query.service;
+    console.log(service);
     const conversations = await Conversation.find({});
+    console.log(conversations);
     const unreadCountsArray = conversations.map(conv => ({
       phone: conv.participant,
       unreadCount: service === 'sms' ? conv.unreadSms : conv.unreadCount,
