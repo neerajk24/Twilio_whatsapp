@@ -11,7 +11,7 @@ import AttachFileIcon from "@mui/icons-material/AttachFile";
 import SendIcon from "@mui/icons-material/Send";
 import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
 import { useChatContext } from "../../Context/ChatContext";
-import { InputArea, Input } from "../Styles/StyledComponent";
+import { InputArea } from "../Styles/StyledComponent";
 import EmojiPicker from 'emoji-picker-react';
 
 const InputField = React.memo(({ activeService }) => {

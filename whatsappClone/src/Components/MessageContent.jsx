@@ -7,10 +7,11 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import {
     Typography,
     Paper,
+    Box,
 } from "@mui/material";
 
 
-const MessageContent = ({ message, onMediaClick }) => {
+const MessageContent = ({ message, onMediaClick , activeService }) => {
     const renderMedia = () => {
         switch (message.content_type) {
             case "image/jpeg":
@@ -126,11 +127,20 @@ const MessageContent = ({ message, onMediaClick }) => {
                 return null;
         }
     };
-
-    return (
-        <div>
-            {message.content_link && renderMedia()}
-            {message.content && (
+    const renderEmailContent = () => {
+        return (
+            <>
+                <Box 
+                    sx={{ 
+                        textAlign: 'center', 
+                        marginBottom: '12px', 
+                        paddingBottom: '8px'
+                    }}
+                >
+                    <Typography variant="subtitle1" fontWeight="bold" style={{fontSize : "40px" , textDecoration : 'underline'}}>
+                        {message.subject}
+                    </Typography>
+                </Box>
                 <Typography
                     component="pre"
                     sx={{
@@ -141,6 +151,31 @@ const MessageContent = ({ message, onMediaClick }) => {
                 >
                     {message.content}
                 </Typography>
+                {message.content_link && renderMedia()}
+            </>
+        );
+    };
+
+    return (
+        <div>
+            {activeService === 'mail' ? (
+                renderEmailContent()
+            ) : (
+                <>
+                    {message.content_link && renderMedia()}
+                    {message.content && (
+                        <Typography
+                            component="pre"
+                            sx={{
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                fontFamily: 'arial',
+                            }}
+                        >
+                            {message.content}
+                        </Typography>
+                    )}
+                </>
             )}
         </div>
     );

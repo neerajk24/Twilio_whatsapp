@@ -8,7 +8,7 @@ export const useChatContext = () => useContext(ChatContext);
 
 const whatsapp = "14155238886";
 const sms = "447380300545";
-const mail = "neeraj.kumar@dynamatix.com";
+const mail = "neeraj.kumar@catura.co.uk";
 const URL = import.meta.env.VITE_API_URL;
 
 export const ChatProvider = ({ children }) => {
@@ -51,7 +51,7 @@ export const ChatProvider = ({ children }) => {
       console.log("fetching the unreadSMS..");
       await axios
         .get(`${URL}/api/user/getUnreadcount/?service=${activeService}`)
-        .then((response) => {console.log(response.data);setUnreadcount(response.data)})
+        .then((response) => { console.log(response.data); setUnreadcount(response.data) })
         .catch((error) => console.error("Error fetching unreadCount:", error.message));
     }
     fetchData();
@@ -164,7 +164,7 @@ export const ChatProvider = ({ children }) => {
     try {
       console.log(activeService);
       const response = await axios.post(`${URL}/api/user/getChatbyNumber`, {
-        number: chat.phoneNumber,
+        number: activeService==='mail' ?  chat.Email  : chat.phoneNumber,
         page: 1,
         limit: 20,
         type: activeService
@@ -189,7 +189,7 @@ export const ChatProvider = ({ children }) => {
     setProgress(30);
     try {
       const response = await axios.post(`${URL}/api/user/getChatbyNumber`, {
-        number: currentUser.phoneNumber,
+        number: activeService === 'mail' ? currentUser.Email  : currentUser.phoneNumber,
         page: nextPage,
         limit: 20,
         type: activeService
@@ -218,17 +218,18 @@ export const ChatProvider = ({ children }) => {
     }
   }, [currentUser, page, hasMore, activeService]);
 
-  const sendMessage = useCallback(async ({subject , content}) => {
+  const sendMessage = useCallback(async ({ subject, content }) => {
+    console.log(subject , content);
     if (currentUser && (content.trim() !== "" || media.contentLink)) {
       const newMessage = {
         sender_id: vendorNumber,
-        receiver_id: currentUser.phoneNumber,
+        receiver_id: activeService === 'mail' ? currentUser.Email : currentUser.phoneNumber,
         content: content.trim(),
         content_type: media.contentType || "text",
         content_link: media.contentLink,
         timestamp: new Date(),
         is_read: false,
-        subject : subject,
+        subject: subject,
       };
 
       setMessages((prevMessages) => [newMessage, ...prevMessages]);
@@ -255,10 +256,10 @@ export const ChatProvider = ({ children }) => {
     if (service === 'whatsapp') {
       setVendorNumber(whatsapp);
     }
-    else if(service==='sms') {
+    else if (service === 'sms') {
       setVendorNumber(sms);
     }
-    else{
+    else {
       setVendorNumber(mail);
     }
     resetAppState();

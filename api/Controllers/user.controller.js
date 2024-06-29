@@ -4,7 +4,7 @@ import Conversation from "../../Models/chat.model.js";
 import axios from "axios";
 import { parseString } from "xml2js";
 import { promisify } from "util";
-import { sendWhatsAppMessage, sendSMSMessage } from "../../Services/twilio.service.js";
+import { sendWhatsAppMessage, sendSMSMessage , sendEmailMessage } from "../../Services/twilio.service.js";
 import {
   generateAccountSASQueryParameters,
   AccountSASPermissions,
@@ -49,6 +49,7 @@ export const listofUsers = async (req, res) => {
       name: caseData.Name[0],
       phoneNumber: caseData.PhoneNumber[0],
       caseId: caseData.CaseId[0],
+      Email: caseData.Email[0],
     }));
 
     // Send the formatted data as JSON response
@@ -64,22 +65,33 @@ export const listofUsers = async (req, res) => {
 export const sendMessage = async (req, res) => {
   try {
     const { message, type } = req.body;
+    console.log(req.body);
     const contentToSend = message.content || null;
     const contentLinkToSend = message.content_link || null;
+    const subjectOfEmail = message.subject || null;
+
     let response;
-    if (type === 'whatsapp') {
+    if (type === "whatsapp") {
       response = await sendWhatsAppMessage(
         message.receiver_id,
         contentToSend,
         contentLinkToSend
       );
-    }
-    else {
+    } else if (type === "sms") {
       response = await sendSMSMessage(
         message.receiver_id,
         contentToSend,
         contentLinkToSend
       );
+    } else if (type === "mail") {
+      response = await sendEmailMessage(
+        message.receiver_id,
+        contentToSend,
+        subjectOfEmail,
+        contentLinkToSend
+      );
+    } else {
+      throw new Error("Unsupported message type");
     }
     let data = await Conversation.findOne({ participant: message.receiver_id });
     if (!data) {
@@ -87,6 +99,7 @@ export const sendMessage = async (req, res) => {
         participant: message.receiver_id,
         messages: [],
         sms: [],
+        mails : [],
       });
       console.log("new Convo created");
     }
@@ -95,8 +108,11 @@ export const sendMessage = async (req, res) => {
     if (type === 'whatsapp') {
       data.messages.push(message);
     }
-    else {
+    else if(type ==='sms') {
       data.sms.push(message);
+    }
+    else{
+      data.mails.push(message)
     }
     await data.save();
     console.log("Data saved in mongo successfully");

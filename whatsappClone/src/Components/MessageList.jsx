@@ -46,7 +46,7 @@ const MessageList = () => {
                             sent={message.sender_id === vendorNumber}
                             activeService={activeService}
                         >
-                            <MessageContent message={message} onMediaClick={handleMediaClick} />
+                            <MessageContent message={message} onMediaClick={handleMediaClick} activeService={activeService} />
                             <Timestamp>
                                 {messageDate.toLocaleTimeString([], {
                                     hour: "2-digit",
