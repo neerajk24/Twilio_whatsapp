@@ -1,9 +1,8 @@
-// File: twilioService.js
+// File: /Service/twilioService.js
 
-import twilio from 'twilio';
-import dotenv from 'dotenv';
 import sgMail from "@sendgrid/mail";
-
+import twilio from "twilio";
+import dotenv from "dotenv";
 
 dotenv.config();
 // Twilio configuration
@@ -12,10 +11,9 @@ const authToken = process.env.ACCOUNT_AUTH;
 const client = twilio(accountSid, authToken);
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-
-const twilioPhoneNumber = 'whatsapp:+14155238886';
-const twilioSMSNumber = '+447380300545';
-const twilioVendorEmail = "neeraj.kumar@catura.co.uk";
+const twilioPhoneNumber = "whatsapp:+14155238886";
+const twilioSMSNumber = "+447380300545";
+const twilioVendorEmail = "neeraj.kumar@dynamatix.com";
 
 export const sendWhatsAppMessage = async (to, content, contentLink) => {
   console.log(`twilioPhone : ${twilioPhoneNumber} , to : ${to}`);
@@ -35,11 +33,10 @@ export const sendWhatsAppMessage = async (to, content, contentLink) => {
     console.log(`Message sent successfully. SID: ${message.sid}`);
     return { messageSid: message.sid, accountSid: accountSid };
   } catch (error) {
-    console.error('Error sending WhatsApp message:', error);
+    console.error("Error sending WhatsApp message:", error);
     throw error;
   }
 };
-
 
 export const sendSMSMessage = async (to, content, contentLink) => {
   console.log(`twilioPhone : ${twilioSMSNumber} , to : ${to}`);
@@ -70,30 +67,16 @@ export const sendEmailMessage = async (
   subjectOfEmail,
   contentLinkToSend
 ) => {
+  // Extract file name from contentLinkToSend
+  const fileName = contentLinkToSend
+    ? extractFileName(contentLinkToSend)
+    : "No File Name";
+
   // Handle multiple line context or body
   const contentParagraphs = content
     .split("\n")
     .map((paragraph) => `<p>${paragraph}</p>`)
     .join("");
-
-  // Conditionally create the file section HTML
-  const fileSectionHtml = contentLinkToSend ? `
-    <br>
-    <hr>
-    <br>
-    <div style="background-color: #f0f0f0; border: 1px solid #888; padding: 10px; margin: 10px; max-width: 400px;">
-      <p>Media Link: <a href="${contentLinkToSend}">${contentLinkToSend}</a></p>
-      <div style="display: flex; align-items: center;">
-        <div style="margin-right: 10px;">
-          <img src="${contentLinkToSend}" alt="Media Preview" style="max-width: 100px; height: auto;">
-        </div>
-        <div>
-          <p style="margin-bottom: 5px;"><strong>File Name:</strong> ${extractFileName(contentLinkToSend)}</p>
-          <p><a href="${contentLinkToSend}">View Media</a></p>
-        </div>
-      </div>
-    </div>
-  ` : '';
 
   const msg = {
     to,
@@ -102,7 +85,21 @@ export const sendEmailMessage = async (
     text: content,
     html: `
     ${contentParagraphs}
-    ${fileSectionHtml}
+      <br>
+      <hr>
+      <br>
+      <div style="background-color: #f0f0f0; border: 1px solid #888; padding: 10px; margin: 10px; max-width: 400px;">
+        <p>Media Link: <a href="${contentLinkToSend}">${contentLinkToSend}</a></p>
+        <div style="display: flex; align-items: center;">
+          <div style="margin-right: 10px;">
+            <img src="${contentLinkToSend}" alt="Media Preview" style="max-width: 100px; height: auto;">
+          </div>
+          <div>
+            <p style="margin-bottom: 5px;"><strong>File Name:</strong> ${fileName}</p>
+            <p><a href="${contentLinkToSend}">View Media</a></p>
+          </div>
+        </div>
+      </div>
     `,
   };
 
